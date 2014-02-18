@@ -1,0 +1,6 @@
+config HOOK_FS 
+	tristate "hookfs (EXPERIMENTAL)"
+	depends on EXPERIMENTAL
+	help
+	  hookfs is based on wrapfs <http://wrapfs.filesystems.org>
+	  It allows installing hooks in filesystem calls.
