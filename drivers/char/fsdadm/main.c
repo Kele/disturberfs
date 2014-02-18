@@ -35,7 +35,7 @@ struct fsdadm_hook_int {
 struct fsdadm_cb_int {
 	uint64_t cbi_id;
 	struct super_block *cbi_sb;
-	void (*cbi_put)(struct super_block *);
+	struct list_head cbi_node;
 };
 
 static dev_t dev;
@@ -89,6 +89,50 @@ static int fsdadm_is_valid_readless(union fsdadm_params *par)
 	return 1;
 }
 
+/* 'lock' has to be held */
+static int _fsdadm_install_callback(struct super_block *sb)
+{
+	struct fsdadm_cb_int *cbi;
+	int found = 0;
+	int err;
+
+	list_for_each_entry(cbi, &callbacks, cbi_node) {
+		if (cbi->cbi_sb == sb) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (found)
+		return 0;
+
+	cbi = kzalloc(sizeof(*cbi), GFP_KERNEL);
+	if (cbi == NULL)
+		return -ENOMEM;
+
+	cbi->cbi_sb = sb;
+	err = hookfs_install_cb(sb, fsdadm_put_super_callback, &cbi->cbi_id);
+	if (err) {
+		kfree(cbi);
+		return err;
+	}
+
+	list_add(&cbi->cbi_node, &callbacks);
+	return 0;
+}
+
+/* 'lock' has to be held */
+static int _fsdadm_remove_callback(struct super_block *sb)
+{
+	struct fsdadm_cb_int *cbi;
+	list_for_each_entry(cbi, &callbacks, cbi_node) {
+		if (cbi->cbi_sb == sb) {
+			return hookfs_remove_cb(cbi->cbi_id, cbi->cbi_sb);
+		}
+	}
+	return 0;
+}
+
 static int fsdadm_install_hook(struct fsdadm_ioc_hook *io)
 {
 	int err;
@@ -97,10 +141,16 @@ static int fsdadm_install_hook(struct fsdadm_ioc_hook *io)
 	struct super_block *sb;
 	int type, op;
 
+	file = fget(io->io_fd);
+	if (file == NULL)
+		return -EBADF;
+	sb = file->f_vfsmnt->mnt_sb;
 
 	hi = kzalloc(sizeof(*hi), GFP_KERNEL);
-	if (hi == NULL)
-		return -ENOMEM;
+	if (hi == NULL) {
+		err = -ENOMEM;
+		goto alloc_failed;
+	}
 
 	INIT_LIST_HEAD(&hi->hi_node);
 	hi->hi_type = io->io_type;
@@ -108,8 +158,10 @@ static int fsdadm_install_hook(struct fsdadm_ioc_hook *io)
 
 	switch (hi->hi_type) {
 	case FSDADM_TYPE_READLESS:
-		if (!fsdadm_is_valid_readless(&hi->hi_params))
-			return -EINVAL;
+		if (!fsdadm_is_valid_readless(&hi->hi_params)) {
+			err = -EINVAL;
+			goto invalid_params;
+		}
 		hi->hi_hook.data = hi;
 		hi->hi_hook.release = fsdadm_release_hook;
 		hi->hi_hook.fn.pre_read = fsdadm_readless_pre_read;
@@ -119,27 +171,43 @@ static int fsdadm_install_hook(struct fsdadm_ioc_hook *io)
 
 	default:
 		kfree(hi);
+		fput(file);
 		return -ENOTTY;
 	}
 
-	file = fget(io->io_fd);
-	if (file == NULL)
-		return -EBADF;
-	sb = file->f_vfsmnt->mnt_sb;
-	/* fsdadm_put_super_callback() can't happen here because of fget() TODO: are we sure? */
-	err = hookfs_install_hook(sb, &hi->hi_hook, type, op, &hi->hi_id);
-	if (err) {
-		fput(file);
-		return err;
-	}
 
 	mutex_lock(&lock);
+	err = _fsdadm_install_callback(sb);
+	if (err)
+		goto callback_failed;
+
+	err = hookfs_install_hook(sb, &hi->hi_hook, type, op, &hi->hi_id);
+	if (err)
+		goto hook_failed;
+
 	list_add(&hi->hi_node, &hooks);
 	mutex_unlock(&lock);
 
 	fput(file);
 
 	return 0;
+
+
+invalid_params:
+	kfree(hi);
+	goto alloc_failed;
+
+hook_failed:
+	_fsdadm_remove_callback(sb);
+
+callback_failed:
+	kfree(hi);
+	mutex_unlock(&lock);
+
+alloc_failed:
+	fput(file);
+	
+	return err;
 }
 
 static int fsdadm_remove_hook(uint64_t id)
@@ -165,7 +233,20 @@ static int fsdadm_remove_hook(uint64_t id)
 
 static int fsdadm_removeall(void)
 {
-	/* TODO: remove all hooks */
+	struct fsdadm_hook_int *hi;
+	struct fsdadm_cb_int *cbi;
+	mutex_lock(&lock);
+	while (!list_empty(&hooks)) {
+		hi = list_first_entry(&hooks, struct fsdadm_hook_int, hi_node);
+		list_del(&hi->hi_node);
+		hookfs_remove_hook(hi->hi_id, hi->hi_sb);
+	}
+	while (!list_empty(&callbacks)) {
+		cbi = list_first_entry(&callbacks, struct fsdadm_cb_int, cbi_node);
+		list_del(&cbi->cbi_node);
+		hookfs_remove_cb(cbi->cbi_id, cbi->cbi_sb);
+	}
+	mutex_unlock(&lock);
 	return 0;
 }
 
