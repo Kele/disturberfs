@@ -1,0 +1,6 @@
+menuconfig FSDADM
+	tristate "Filesystem disturber driver"
+	depends on EXPERIMENTAL
+	depends on HOOK_FS
+	---help---
+	  TODO
