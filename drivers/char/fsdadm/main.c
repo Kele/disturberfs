@@ -218,13 +218,16 @@ static int fsdadm_remove_hook(uint64_t id)
 {
 	struct fsdadm_hook_int *hi;
 	int err;
+	int found = 0;
 
 	mutex_lock(&lock);
 	list_for_each_entry(hi, &hooks, hi_node) {
-		if (hi->hi_id == id)
+		if (hi->hi_id == id) {
+			found = 1;
 			break;
+		}
 	}
-	if (hi != NULL) {
+	if (found) {
 		list_del(&hi->hi_node);
 		err =  hookfs_remove_hook(hi->hi_id, hi->hi_sb);
 	} else {
