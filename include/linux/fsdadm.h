@@ -9,6 +9,12 @@
 #ifndef _FSDADM_H_
 #define _FSDADM_H_
 
+#include <linux/types.h>
+
+#ifndef __KERNEL__
+#include <stdint.h>
+#endif
+
 #define FSDADM_IOC_INSTALL	1
 #define FSDADM_IOC_REMOVE	2
 #define FSDADM_IOC_LIST		3
