@@ -293,16 +293,14 @@ static long fsdadm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case FSDADM_IOC_INSTALL: {
 		struct fsdadm_ioc_hook io;
 
-		if (copy_from_user(&io, (struct fsdadm_ioc_hook *)arg, sizeof(io))
-		    < sizeof(io))
+		if (copy_from_user(&io, (struct fsdadm_ioc_hook *)arg, sizeof(io)))
 			return -EFAULT;
 
 		err = fsdadm_install_hook(&io);
 		if (err)
 			return err;
 
-		if (copy_to_user((struct fsdadm_ioc_hook *)arg, &io, sizeof(io))
-		    < sizeof(io))
+		if (copy_to_user((struct fsdadm_ioc_hook *)arg, &io, sizeof(io)))
 			return -EFAULT;
 
 		return 0;
