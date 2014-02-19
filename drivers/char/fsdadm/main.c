@@ -280,7 +280,7 @@ static int fsdadm_release(struct inode *inode, struct file *filp)
 {
 	mutex_lock(&lock);
 	is_opened = 0;
-	mutex_lock(&lock);
+	mutex_unlock(&lock);
 
 	return 0;
 }
