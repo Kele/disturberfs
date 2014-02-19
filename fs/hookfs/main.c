@@ -23,10 +23,11 @@ static int hookfs_read_super(struct super_block *sb, void *raw_data,
 	struct path lower_path;
 	char *dev_name = (char *) raw_data;
 	struct inode *inode;
+	struct hookfs_sb_info *sbi;
 
 	if (!dev_name) {
 		printk(KERN_ERR
-		       "hookfs: read_super: missing dev_name argument\n");
+		    "hookfs: read_super: missing dev_name argument\n");
 		err = -EINVAL;
 		goto out;
 	}
@@ -36,7 +37,7 @@ static int hookfs_read_super(struct super_block *sb, void *raw_data,
 			&lower_path);
 	if (err) {
 		printk(KERN_ERR	"hookfs: error accessing "
-		       "lower directory '%s'\n", dev_name);
+		    "lower directory '%s'\n", dev_name);
 		goto out;
 	}
 
@@ -49,9 +50,11 @@ static int hookfs_read_super(struct super_block *sb, void *raw_data,
 	}
 
 	/* initialize HOOKFS_SB(sb) */
-	mutex_init(&HOOKFS_SB(sb)->write_lock);
-	for (int i = 0; i < ARRAY_SIZE(HOOKFS_SB(sb)->hooks); i++)
-		INIT_LIST_HEAD(&HOOKFS_SB(sb)->hooks[i]);
+	sbi = HOOKFS_SB(sb);
+	mutex_init(&sbi->write_lock);
+	for (int i = 0; i < ARRAY_SIZE(sbi->hooks); i++)
+		INIT_LIST_HEAD(&sbi->hooks[i]);
+	INIT_LIST_HEAD(&sbi->put_super_callbacks);
 
 	/* set the lower superblock field of upper superblock */
 	lower_sb = lower_path.dentry->d_sb;
