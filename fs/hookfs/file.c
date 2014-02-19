@@ -47,7 +47,7 @@ static ssize_t hookfs_read(struct file *file, char __user *buf, size_t count,
 		rcu_read_unlock();
 	}
 
-	err = vfs_read(file, buf, count, ppos);
+	err = vfs_read(lower_file, buf, count, ppos);
 	
 	rcu_read_lock();
 	hi = list_first_or_null_rcu(
