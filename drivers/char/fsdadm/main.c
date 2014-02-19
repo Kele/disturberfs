@@ -158,6 +158,7 @@ static int fsdadm_install_hook(struct fsdadm_ioc_hook *io)
 
 	INIT_LIST_HEAD(&hi->hi_node);
 	hi->hi_type = io->io_type;
+	hi->hi_sb = sb;
 	memcpy(&hi->hi_params, &io->io_params, sizeof(hi->hi_params));
 
 	switch (hi->hi_type) {
