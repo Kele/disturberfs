@@ -68,6 +68,7 @@ static void fsdadm_release_hook(void *data, __attribute__((unused)) uint64_t id)
 static void fsdadm_put_super_callback(struct super_block *sb)
 {
 	struct fsdadm_hook_int *hi;
+	struct fsdadm_cb_int *cbi;
 	struct list_head *node, *tmp;
 
 	mutex_lock(&lock);
@@ -76,6 +77,13 @@ static void fsdadm_put_super_callback(struct super_block *sb)
 		if (hi->hi_sb == sb) {
 			list_del(&hi->hi_node);
 			kfree(hi);
+		}
+	}
+	list_for_each_safe(node, tmp, &callbacks) {
+		cbi = list_entry(node, struct fsdadm_cb_int, cbi_node);
+		if (cbi->cbi_sb == sb) {
+			list_del(&cbi->cbi_node);
+			kfree(cbi);
 		}
 	}
 	mutex_unlock(&lock);
