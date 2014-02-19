@@ -8,10 +8,12 @@
 
 #include <asm/uaccess.h>
 #include <linux/cdev.h>
-#include <linux/fsdadm.h>
+#include <linux/device.h>
+#include <linux/err.h>
 #include <linux/fdtable.h>
 #include <linux/file.h>
 #include <linux/fs.h>
+#include <linux/fsdadm.h>
 #include <linux/hookfs.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -44,6 +46,8 @@ static struct cdev *cdev;
 static LIST_HEAD(hooks);
 static LIST_HEAD(callbacks);
 static struct mutex lock;
+static struct class *class;
+static struct device *device;
 
 static void fsdadm_readless_pre_read(void *data, struct file **file, char **buf,
     size_t *count, loff_t **pos)
@@ -342,6 +346,21 @@ static int fsdadm_init(void)
 	if (err)
 		return err;
 
+	/* TODO: error checking */
+	class = class_create(THIS_MODULE, "hookfsadm");
+	if (IS_ERR(class)) {
+		err = PTR_ERR(class);
+		/* TODO: cleanup */
+		return err;
+	}
+
+	device =  device_create(class, NULL, dev, NULL, "fsdadm");
+	if (IS_ERR(device)) {
+		err = PTR_ERR(device);
+		/* TODO: cleanup */
+		return err;
+	}
+
 	mutex_init(&lock);
 
 	cdev = cdev_alloc();
@@ -358,6 +377,7 @@ static int fsdadm_init(void)
 	return 0;
 
 err_out:
+    /* TODO: set to NULL */
 	if (cdev != NULL)
 		kfree(cdev);
 	mutex_destroy(&lock);
@@ -367,6 +387,8 @@ err_out:
 
 static void fsdadm_exit(void)
 {
+    device_destroy(class, dev);
+    class_destroy(class);
 	fsdadm_removeall();
 	cdev_del(cdev);	
 	cdev = NULL;
