@@ -83,8 +83,11 @@ static void fsdadm_put_super_callback(struct super_block *sb)
 	list_for_each_safe(node, tmp, &callbacks) {
 		cbi = list_entry(node, struct fsdadm_cb_int, cbi_node);
 		if (cbi->cbi_sb == sb) {
+            printk(KERN_NOTICE "fsdadm: calling put_super_callback of id = %u\n",
+                cbi->cbi_id);
 			list_del(&cbi->cbi_node);
 			kfree(cbi);
+            break;
 		}
 	}
 	mutex_unlock(&lock);
