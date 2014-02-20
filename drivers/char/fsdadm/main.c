@@ -24,7 +24,6 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 
-
 struct fsdadm_hook_int {
 	uint64_t hi_id;
 	struct super_block *hi_sb;
@@ -49,12 +48,27 @@ static struct mutex lock;
 static struct class *class;
 static struct device *device;
 
+static long rand_seed;
+static int fsdadm_rand(void)
+{
+	/* XXX: we don't care here about concurrency issues */
+	rand_seed = rand_seed * 1103515245L + 12345;
+	return (rand_seed & 0x7ffffffff);
+}
+
 static void fsdadm_readless_pre_read(void *data, struct file **file, char **buf,
     size_t *count, loff_t **pos)
 {
 	struct fsdadm_hook_int *hi = data;
-	printk(KERN_NOTICE "fsdadm: calling readless hook of id = %u\n", (unsigned)hi->hi_id);
-	/* TODO: count -= delta? just like that? */
+	int r;
+
+	r = fsdadm_rand() % 100;
+	if (r < hi->hi_params.readless.probability) {
+		r = (fsdadm_rand() % hi->hi_params.readless.range[1]) -
+		    hi->hi_params.readless.range[0];
+		if (*count > r)
+			*count -= r;
+	}
 }
 
 /*
