@@ -52,7 +52,8 @@ static struct device *device;
 static void fsdadm_readless_pre_read(void *data, struct file **file, char **buf,
     size_t *count, loff_t **pos)
 {
-	__attribute__((unused)) struct fsdadm_hook_int *hi = data;
+	struct fsdadm_hook_int *hi = data;
+	printk(KERN_NOTICE "fsdadm: calling readless hook of id = %u\n", (unsigned)hi->hi_id);
 	/* TODO: count -= delta? just like that? */
 }
 
