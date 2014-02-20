@@ -197,6 +197,7 @@ static int fsdadm_install_hook(struct fsdadm_ioc_hook *io)
 	err = hookfs_install_hook(sb, &hi->hi_hook, type, op, &hi->hi_id);
 	if (err)
 		goto hook_failed;
+	io->io_id = hi->hi_id;
 
 	list_add(&hi->hi_node, &hooks);
 	mutex_unlock(&lock);
