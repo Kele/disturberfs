@@ -37,8 +37,8 @@ static ssize_t hookfs_read(struct file *file, char __user *buf, size_t count,
 		
 		rcu_read_lock();
 		kref_put(&hi->hi_ref, hookfs_release_hook);
-		node = list_next_rcu(&hi->hi_node);
-		if (node != NULL) {
+		node = rcu_dereference(list_next_rcu(&hi->hi_node));
+		if (node != &sbinfo->hooks[HOOKFS_MKMODE(HOOKFS_OP_READ, HOOKFS_TYPE_PRE)]) {
 			hi = list_entry_rcu(node, struct hookfs_hook_int, hi_node);
 			kref_get(&hi->hi_ref);
 		} else {
@@ -62,8 +62,8 @@ static ssize_t hookfs_read(struct file *file, char __user *buf, size_t count,
 		
 		rcu_read_lock();
 		kref_put(&hi->hi_ref, hookfs_release_hook);
-		node = list_next_rcu(&hi->hi_node);
-		if (node != NULL) {
+		node = rcu_dereference(list_next_rcu(&hi->hi_node));
+		if (node != &sbinfo->hooks[HOOKFS_MKMODE(HOOKFS_OP_READ, HOOKFS_TYPE_POST)]) {
 			hi = list_entry_rcu(node, struct hookfs_hook_int, hi_node);
 			kref_get(&hi->hi_ref);
 		} else {
