@@ -66,6 +66,9 @@ int hookfs_install_hook(struct super_block *sb, struct hookfs_hook *hook, int ty
 		kfree(new_hook);
 	mutex_unlock(&sbi->write_lock);
 	
+	if (!err)
+		printk(KERN_INFO "hookfs: installed new hook of id %u\n", (unsigned)*id);
+
 	return err;
 }
 EXPORT_SYMBOL(hookfs_install_hook);
@@ -73,6 +76,7 @@ EXPORT_SYMBOL(hookfs_install_hook);
 void hookfs_release_hook(struct kref *kref)
 {
 	struct hookfs_hook_int *hook = container_of(kref, struct hookfs_hook_int, hi_ref);
+	printk(KERN_INFO "hookfs: releasing hook of id %u\n", (unsigned)hook->hi_id);
 	(*hook->hi_release)(hook->hi_data, hook->hi_id);
 	kfree(hook);
 }
@@ -97,6 +101,9 @@ int hookfs_remove_hook(uint64_t id, struct super_block *sb)
 	}
 	mutex_unlock(&sbi->write_lock);
 
+	if (found)
+		printk(KERN_INFO "hookfs: removed hook of id: %u\n", (unsigned)id);
+
 	return found ? 0 : -EINVAL;
 }
 EXPORT_SYMBOL(hookfs_remove_hook);
@@ -116,6 +123,8 @@ int hookfs_install_cb(struct super_block *sb, void (*put)(struct super_block *),
 	*id = cb->cb_id = hookfs_new_id(sb);
 	list_add(&cb->cb_node, &sbi->put_super_callbacks);
 	mutex_unlock(&sbi->write_lock);
+
+	printk(KERN_INFO "hookfs: installed new callback of id: %u\n", (unsigned)*id);
 
 	return 0;
 }
@@ -137,6 +146,9 @@ int hookfs_remove_cb(uint64_t id, struct super_block *sb)
 		}
 	}
 	mutex_unlock(&sbi->write_lock);
+
+	if (found)
+		printk(KERN_INFO "hookfs: removed callback of id: %u\n", (unsigned)id);
 
 	return found ? 0 : -EINVAL;
 }
