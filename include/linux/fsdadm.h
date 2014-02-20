@@ -15,10 +15,11 @@
 #include <stdint.h>
 #endif
 
-#define FSDADM_IOC_INSTALL	1
-#define FSDADM_IOC_REMOVE	2
-#define FSDADM_IOC_LIST		3
-#define FSDADM_IOC_REMOVEALL	4
+#define FSDADM_IOC		('f' << 24 | 's' << 16 | 'd' << 8)
+#define FSDADM_IOC_INSTALL	(FSDADM_IOC | 1)
+#define FSDADM_IOC_REMOVE	(FSDADM_IOC | 2)
+#define FSDADM_IOC_LIST		(FSDADM_IOC | 3)
+#define FSDADM_IOC_REMOVEALL	(FSDADM_IOC | 4)
 
 #define	FSDADM_TYPE_READLESS	1
 
